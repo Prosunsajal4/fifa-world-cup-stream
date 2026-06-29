@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Maximize, Minimize, Tv, Globe, Monitor } from "lucide-react";
+import { Maximize, Minimize, Tv, Globe, Monitor, AlertCircle } from "lucide-react";
+import Hls from "hls.js";
 
 interface StreamSource {
   id: string;
@@ -20,47 +21,56 @@ interface StreamPlayerProps {
   sources?: StreamSource[];
 }
 
+const FALLBACK_SOURCES: StreamSource[] = [
+  { id: "f1", streamNo: 0, language: "BeIN Sports 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f2", streamNo: 0, language: "BeIN Sports 4", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/26/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f3", streamNo: 0, language: "Fox Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/33/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f4", streamNo: 0, language: "Fox Sports 2", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/34/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f5", streamNo: 0, language: "TVP Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/89/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f6", streamNo: 0, language: "DAZN 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/94/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f7", streamNo: 0, language: "WIN Sports", hd: false, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/32/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f8", streamNo: 0, language: "D Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/106/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f9", streamNo: 0, language: "Telemundo", hd: true, embedUrl: "https://nbculocallive.akamaized.net/hls/live/2037499/puertorico/stream1/master.m3u8", source: "iptv", viewers: 0 },
+  { id: "f10", streamNo: 0, language: "TVRI Sport", hd: false, embedUrl: "http://103.148.44.38:8000/play/a05u/index.m3u8", source: "iptv", viewers: 0 },
+  { id: "f11", streamNo: 0, language: "DD Sports", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/13/master.m3u8", source: "iptv", viewers: 0 },
+  { id: "f12", streamNo: 0, language: "DD Sports 2", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/14/master.m3u8", source: "iptv", viewers: 0 },
+  { id: "f13", streamNo: 0, language: "T Sports", hd: true, embedUrl: "https://owrcovcrpy.gpcdn.net/bpk-tv/1728/output/index.m3u8", source: "iptv", viewers: 0 },
+];
+
+function isHlsUrl(url: string): boolean {
+  return url.includes(".m3u8");
+}
+
 export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = [] }: StreamPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
   const [showAllSources, setShowAllSources] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [attemptCount, setAttemptCount] = useState(0);
+  const [error, setError] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fallbackSources: StreamSource[] = [
-    { id: "f1", streamNo: 0, language: "BeIN Sports 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f2", streamNo: 0, language: "BeIN Sports 4", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/26/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f3", streamNo: 0, language: "Fox Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/33/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f4", streamNo: 0, language: "Fox Sports 2", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/34/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f5", streamNo: 0, language: "TVP Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/89/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f6", streamNo: 0, language: "DAZN 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/94/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f7", streamNo: 0, language: "WIN Sports", hd: false, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/32/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f8", streamNo: 0, language: "D Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/106/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f9", streamNo: 0, language: "Telemundo", hd: true, embedUrl: "https://nbculocallive.akamaized.net/hls/live/2037499/puertorico/stream1/master.m3u8", source: "iptv", viewers: 0 },
-    { id: "f10", streamNo: 0, language: "TVRI Sport", hd: false, embedUrl: "http://103.148.44.38:8000/play/a05u/index.m3u8", source: "iptv", viewers: 0 },
-    { id: "f11", streamNo: 0, language: "DD Sports", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/13/master.m3u8", source: "iptv", viewers: 0 },
-    { id: "f12", streamNo: 0, language: "DD Sports 2", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/14/master.m3u8", source: "iptv", viewers: 0 },
-    { id: "f13", streamNo: 0, language: "T Sports", hd: true, embedUrl: "https://owrcovcrpy.gpcdn.net/bpk-tv/1728/output/index.m3u8", source: "iptv", viewers: 0 },
-  ];
-
   const apiSources = sources.filter((s) => s.source === "golf" || s.source === "iptv");
-  const sortedSources = apiSources.length > 0 ? apiSources : fallbackSources;
-
+  const sortedSources = apiSources.length > 0 ? apiSources : FALLBACK_SOURCES;
   const currentSource = sortedSources[currentSourceIndex] || null;
 
-  const tryNextSource = useCallback(() => {
-    if (loadTimerRef.current) {
-      clearTimeout(loadTimerRef.current);
+  const destroyHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
+  }, []);
 
+  const tryNextSource = useCallback(() => {
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
     const nextIndex = currentSourceIndex + 1;
     if (nextIndex < sortedSources.length) {
       setCurrentSourceIndex(nextIndex);
-      setAttemptCount((c) => c + 1);
       setLoading(true);
+      setError(false);
     } else {
       setLoading(false);
     }
@@ -68,42 +78,41 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
 
   useEffect(() => {
     if (!currentSource) return;
-
     setLoading(true);
+    setError(false);
+    destroyHls();
 
-    if (loadTimerRef.current) {
-      clearTimeout(loadTimerRef.current);
+    const video = videoRef.current;
+    if (!video || !isHlsUrl(currentSource.embedUrl)) return;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+      hlsRef.current = hls;
+      hls.loadSource(currentSource.embedUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+        setLoading(false);
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          tryNextSource();
+        }
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = currentSource.embedUrl;
+      video.play().catch(() => {});
+      setLoading(false);
+    } else {
+      tryNextSource();
     }
 
-    loadTimerRef.current = setTimeout(() => {
-      setLoading(false);
-    }, 3000);
-
-    return () => {
-      if (loadTimerRef.current) {
-        clearTimeout(loadTimerRef.current);
-      }
-    };
-  }, [currentSourceIndex, currentSource]);
+    return () => { destroyHls(); };
+  }, [currentSourceIndex, currentSource, destroyHls, tryNextSource]);
 
   useEffect(() => {
-    return () => {
-      if (loadTimerRef.current) {
-        clearTimeout(loadTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleIframeLoad = () => {
-    setLoading(false);
-    if (loadTimerRef.current) {
-      clearTimeout(loadTimerRef.current);
-    }
-  };
-
-  const handleIframeError = () => {
-    tryNextSource();
-  };
+    return () => { destroyHls(); if (loadTimerRef.current) clearTimeout(loadTimerRef.current); };
+  }, [destroyHls]);
 
   const toggleFullscreen = () => {
     if (!playerRef.current) return;
@@ -114,28 +123,36 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
     }
   };
 
-  const getEmbedUrl = () => {
-    if (!currentSource) return "";
-    let url = currentSource.embedUrl;
-    url += url.includes("?") ? "&autoplay=1" : "?autoplay=1";
-    return url;
+  const selectSource = (index: number) => {
+    setCurrentSourceIndex(index);
+    setLoading(true);
+    setError(false);
+    setShowAllSources(false);
   };
+
+  const useIframe = currentSource && !isHlsUrl(currentSource.embedUrl);
 
   return (
     <div ref={playerRef} className="relative rounded-xl overflow-hidden glow-border bg-black aspect-video">
-      {getEmbedUrl() ? (
+      {currentSource && isHlsUrl(currentSource.embedUrl) && (
+        <video ref={videoRef} className="absolute inset-0 w-full h-full" playsInline controls={false} />
+      )}
+
+      {useIframe && (
         <iframe
           ref={iframeRef}
-          key={`${currentSourceIndex}-${attemptCount}`}
-          src={getEmbedUrl()}
+          key={`${currentSourceIndex}`}
+          src={currentSource.embedUrl + (currentSource.embedUrl.includes("?") ? "&autoplay=1" : "?autoplay=1")}
           className="absolute inset-0 w-full h-full border-0"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; encrypted-media-key-system-config; encrypted-media-key-system-config"
+          allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           title={`${homeTeam} vs ${awayTeam}`}
-          onLoad={handleIframeLoad}
-          onError={handleIframeError}
+          onLoad={() => setLoading(false)}
+          onError={() => tryNextSource()}
         />
-      ) : (
+      )}
+
+      {!currentSource && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-surface to-background">
           <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center animate-pulse-glow mb-4">
             <Tv className="w-10 h-10 text-primary" />
@@ -145,12 +162,11 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
         </div>
       )}
 
-      {loading && (
+      {loading && currentSource && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-10 pointer-events-none">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-xs text-white/70">
-            Trying source {currentSourceIndex + 1} of {sortedSources.length}...
-          </p>
+          <p className="text-xs text-white/70">Trying source {currentSourceIndex + 1} of {sortedSources.length}...</p>
+          <p className="text-[10px] text-white/40 mt-1">{currentSource.language}</p>
         </div>
       )}
 
@@ -162,7 +178,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
               <span className="text-xs text-white font-bold">LIVE</span>
             </div>
             <span className="text-[10px] text-white/50 hidden sm:block">
-              Source {currentSourceIndex + 1}: {currentSource?.language}
+              {currentSource?.language}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -199,12 +215,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
               {sortedSources.map((source, index) => (
                 <button
                   key={index}
-                  onClick={() => {
-                    setCurrentSourceIndex(index);
-                    setAttemptCount(0);
-                    setLoading(true);
-                    setShowAllSources(false);
-                  }}
+                  onClick={() => selectSource(index)}
                   className={`text-left p-3 rounded-lg transition-all ${
                     currentSourceIndex === index
                       ? "bg-primary text-white ring-2 ring-primary"
@@ -213,10 +224,10 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">📺</span>
+                      <span className="text-lg">{isHlsUrl(source.embedUrl) ? "📺" : "🌐"}</span>
                       <div>
                         <p className="text-xs font-medium">{source.language}</p>
-                        <p className="text-[10px] text-white/40">{source.source}</p>
+                        <p className="text-[10px] text-white/40">{isHlsUrl(source.embedUrl) ? "HLS Stream" : "Embed"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -237,11 +248,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
             {sortedSources.slice(0, 6).map((source, index) => (
               <button
                 key={index}
-                onClick={() => {
-                  setCurrentSourceIndex(index);
-                  setAttemptCount(0);
-                  setLoading(true);
-                }}
+                onClick={() => selectSource(index)}
                 className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${
                   currentSourceIndex === index
                     ? "bg-primary text-white shadow-lg shadow-primary/30"
@@ -249,7 +256,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
                 }`}
               >
                 {source.language.length > 15 ? source.language.substring(0, 15) + "..." : source.language}
-                {source.hd && <span className="text-primary ml-0.5">★</span>}
+                {source.hd && <span className="text-primary ml-0.5">&#9733;</span>}
               </button>
             ))}
             {sortedSources.length > 6 && (

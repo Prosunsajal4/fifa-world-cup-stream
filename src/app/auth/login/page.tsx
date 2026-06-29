@@ -2,12 +2,37 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Tv, Zap } from "lucide-react";
+import { validateUser } from "@/lib/auth";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 500));
+    const user = validateUser(email, password);
+    if (!user) {
+      setError("Invalid email or password");
+      setLoading(false);
+      return;
+    }
+    window.dispatchEvent(new Event("auth-change"));
+    router.push("/");
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4">
@@ -23,11 +48,15 @@ export default function LoginPage() {
             <p className="text-sm text-muted mt-1">Sign in to continue watching</p>
           </div>
 
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-danger/10 border border-danger/30 rounded-lg p-3 text-sm text-danger text-center">
+                {error}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                 <input
@@ -41,9 +70,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                 <input
@@ -58,47 +85,31 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground transition-colors"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded bg-surface border-border text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-muted">Remember me</span>
-              </label>
-              <Link
-                href="#"
-                className="text-sm text-primary hover:text-primary-glow transition-colors"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
             <button
               type="submit"
-              className="btn-neon w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all flex items-center justify-center gap-2"
+              disabled={loading}
+              className="btn-neon w-full py-3 rounded-lg font-semibold bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Zap className="w-4 h-4" />
-              Sign In
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  Sign In
+                </>
+              )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-muted">
               Don&apos;t have an account?{" "}
-              <Link
-                href="/auth/register"
-                className="text-primary hover:text-primary-glow font-medium transition-colors"
-              >
+              <Link href="/auth/register" className="text-primary hover:text-primary-glow font-medium transition-colors">
                 Sign up
               </Link>
             </p>

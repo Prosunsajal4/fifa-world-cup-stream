@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn, Radio } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn, Radio, LogOut, User as UserIcon } from "lucide-react";
+import { getSession, logout, type User } from "@/lib/auth";
 
 const navLinks = [
   { href: "/", label: "Home", icon: Zap },
@@ -17,6 +18,21 @@ const navLinks = [
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUser(getSession());
+    const handler = () => setUser(getSession());
+    window.addEventListener("auth-change", handler);
+    return () => window.removeEventListener("auth-change", handler);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+    window.dispatchEvent(new Event("auth-change"));
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-border">
@@ -55,19 +71,37 @@ export default function Header() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/auth/login"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-muted hover:text-primary transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              Login
-            </Link>
-            <Link
-              href="/auth/register"
-              className="btn-neon flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg hover:shadow-primary/30 transition-all"
-            >
-              Sign Up
-            </Link>
+            {user ? (
+              <>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface text-sm">
+                  <UserIcon className="w-4 h-4 text-primary" />
+                  <span className="text-foreground font-medium">{user.name}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-muted hover:text-danger transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-muted hover:text-primary transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="btn-neon flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg hover:shadow-primary/30 transition-all"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -97,21 +131,39 @@ export default function Header() {
               );
             })}
             <div className="pt-2 border-t border-border mt-2 space-y-1">
-              <Link
-                href="/auth/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-primary hover:bg-surface-light transition-all"
-              >
-                <LogIn className="w-4 h-4" />
-                Login
-              </Link>
-              <Link
-                href="/auth/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-primary to-secondary text-white"
-              >
-                Sign Up
-              </Link>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground">
+                    <UserIcon className="w-4 h-4 text-primary" />
+                    {user.name}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-danger hover:bg-surface-light transition-all w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-primary hover:bg-surface-light transition-all"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Login
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-primary to-secondary text-white"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
