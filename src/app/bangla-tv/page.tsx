@@ -70,7 +70,6 @@ export default function BanglaTVPage() {
       const url = channel.url;
 
       if (url.includes(".m3u8")) {
-        const proxyUrl = `/api/stream?url=${encodeURIComponent(url)}`;
         if (Hls.isSupported()) {
           const hls = new Hls({
             enableWorker: true,
@@ -80,7 +79,7 @@ export default function BanglaTVPage() {
             startFragPrefetch: true,
           });
           hlsRef.current = hls;
-          hls.loadSource(proxyUrl);
+          hls.loadSource(url);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setPlaying(true);
@@ -99,12 +98,11 @@ export default function BanglaTVPage() {
             }
           });
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = proxyUrl;
+          video.src = url;
           video.play().then(() => setPlaying(true)).catch(() => {});
         }
       } else {
-        const proxyUrl = `/api/stream?url=${encodeURIComponent(url)}`;
-        video.src = proxyUrl;
+        video.src = url;
         video.play().then(() => setPlaying(true)).catch(() => {});
       }
     }, 100);
