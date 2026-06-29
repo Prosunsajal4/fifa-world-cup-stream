@@ -1,22 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, X, Tv, Radio, Search, ChevronDown, Maximize, Minimize, RefreshCw } from "lucide-react";
+import { Play, X, Search, ChevronDown, Maximize, Minimize, RefreshCw, Tv, Radio } from "lucide-react";
 import Hls from "hls.js";
 
 interface Channel {
   name: string;
-  logo: string;
-  group: string;
   url: string;
 }
 
-export default function BanglaTVPage() {
+interface IPTVPlayerProps {
+  type: "bangla" | "sports";
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  accentColor: string;
+}
+
+export default function IPTVPlayer({ type, title, description, icon, accentColor }: IPTVPlayerProps) {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState("All");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [streamError, setStreamError] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -25,22 +30,18 @@ export default function BanglaTVPage() {
   const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
-    fetch("/api/channels")
+    fetch(`/api/iptv?type=${type}`)
       .then((r) => r.json())
       .then((data) => {
         setChannels(data.channels || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+  }, [type]);
 
-  const groups = ["All", ...Array.from(new Set(channels.map((c) => c.group)))];
-
-  const filteredChannels = channels.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGroup = selectedGroup === "All" || c.group === selectedGroup;
-    return matchesSearch && matchesGroup;
-  });
+  const filteredChannels = channels.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const toggleFullscreen = () => {
     if (!playerRef.current) return;
@@ -128,12 +129,12 @@ export default function BanglaTVPage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-cyan-500 flex items-center justify-center">
-            <Tv className="w-5 h-5 text-white" />
+          <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center`}>
+            {icon}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Bangla TV Channels</h1>
-            <p className="text-sm text-muted">Live Bangladeshi TV channels - IPTV streams</p>
+            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+            <p className="text-sm text-muted">{description}</p>
           </div>
         </div>
 
@@ -153,33 +154,18 @@ export default function BanglaTVPage() {
                 <X className="w-10 h-10 text-red-500 mb-3" />
                 <p className="text-white text-sm mb-4">Stream unavailable</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => playStream(selectedChannel)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary rounded-lg text-white text-sm hover:bg-primary/80"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry
+                  <button onClick={() => playStream(selectedChannel)} className="flex items-center gap-2 px-4 py-2 bg-primary rounded-lg text-white text-sm hover:bg-primary/80">
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry
                   </button>
-                  <button
-                    onClick={closePlayer}
-                    className="px-4 py-2 bg-white/10 rounded-lg text-white text-sm hover:bg-white/20"
-                  >
-                    Close
-                  </button>
+                  <button onClick={closePlayer} className="px-4 py-2 bg-white/10 rounded-lg text-white text-sm hover:bg-white/20">Close</button>
                 </div>
               </div>
             )}
 
-            <button
-              onClick={closePlayer}
-              className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors z-20"
-            >
+            <button onClick={closePlayer} className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors z-20">
               <X className="w-4 h-4 text-white" />
             </button>
-            <button
-              onClick={toggleFullscreen}
-              className="absolute top-3 right-14 w-9 h-9 rounded-lg bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors z-20"
-            >
+            <button onClick={toggleFullscreen} className="absolute top-3 right-14 w-9 h-9 rounded-lg bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors z-20">
               {isFullscreen ? <Minimize className="w-4 h-4 text-white" /> : <Maximize className="w-4 h-4 text-white" />}
             </button>
 
@@ -192,37 +178,20 @@ export default function BanglaTVPage() {
                   </div>
                 )}
                 <span className="text-sm text-white font-medium">{selectedChannel.name}</span>
-                <span className="text-xs text-white/50">{selectedChannel.group}</span>
               </div>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-            <input
-              type="text"
-              placeholder="Search channels..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
-          <div className="relative">
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="appearance-none pl-4 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
-            >
-              {groups.map((g) => (
-                <option key={g} value={g} className="bg-surface">
-                  {g}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
-          </div>
+        <div className="relative mb-6 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            type="text"
+            placeholder="Search channels..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-primary transition-colors"
+          />
         </div>
 
         {loading ? (
@@ -250,16 +219,6 @@ export default function BanglaTVPage() {
                   }`}
                 >
                   <div className="aspect-video bg-gradient-to-br from-surface to-background flex items-center justify-center relative">
-                    {channel.logo ? (
-                      <img
-                        src={channel.logo}
-                        alt={channel.name}
-                        className="w-full h-full object-contain p-2"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : null}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/40 transition-opacity">
                       <div className="w-10 h-10 rounded-full bg-primary/80 flex items-center justify-center">
                         <Play className="w-5 h-5 text-white ml-0.5" />
@@ -276,7 +235,6 @@ export default function BanglaTVPage() {
                   </div>
                   <div className="p-2">
                     <p className="text-xs font-medium text-foreground truncate">{channel.name}</p>
-                    <p className="text-[10px] text-muted truncate">{channel.group}</p>
                   </div>
                 </button>
               ))}

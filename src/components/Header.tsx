@@ -7,7 +7,8 @@ import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn, Radio } fr
 const navLinks = [
   { href: "/", label: "Home", icon: Zap },
   { href: "/live", label: "Live", icon: Tv },
-  { href: "/bangla-tv", label: "Bangla TV", icon: Radio },
+  { href: "/indian-bangla", label: "Bangla", icon: Radio },
+  { href: "/sports-tv", label: "Sports TV", icon: Trophy },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/teams", label: "Teams", icon: Users },
   { href: "/standings", label: "Standings", icon: Trophy },
