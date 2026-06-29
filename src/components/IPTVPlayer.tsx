@@ -7,10 +7,11 @@ import Hls from "hls.js";
 interface Channel {
   name: string;
   url: string;
+  logo?: string;
 }
 
 interface IPTVPlayerProps {
-  type: "bangla" | "sports";
+  type: "bd" | "bangla" | "sports";
   title: string;
   description: string;
   icon: React.ReactNode;
@@ -219,6 +220,16 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
                   }`}
                 >
                   <div className="aspect-video bg-gradient-to-br from-surface to-background flex items-center justify-center relative">
+                    {channel.logo ? (
+                      <img
+                        src={channel.logo}
+                        alt={channel.name}
+                        className="w-full h-full object-contain p-2"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : null}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-black/40 transition-opacity">
                       <div className="w-10 h-10 rounded-full bg-primary/80 flex items-center justify-center">
                         <Play className="w-5 h-5 text-white ml-0.5" />
