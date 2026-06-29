@@ -1,10 +1,7 @@
+"use client";
+
 import IPTVPlayer from "@/components/IPTVPlayer";
 import { Tv } from "lucide-react";
-
-export const metadata = {
-  title: "Bangla BD TV - Live Streaming",
-  description: "Watch live Bangladeshi TV channels",
-};
 
 export default function BanglaBDPage() {
   return (

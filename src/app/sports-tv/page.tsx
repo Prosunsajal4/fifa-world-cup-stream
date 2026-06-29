@@ -1,10 +1,7 @@
+"use client";
+
 import IPTVPlayer from "@/components/IPTVPlayer";
 import { Trophy } from "lucide-react";
-
-export const metadata = {
-  title: "Sports TV - Live Streaming",
-  description: "Watch live sports channels - Star Sports, Sony Ten, Sky Sports and more",
-};
 
 export default function SportsTVPage() {
   return (

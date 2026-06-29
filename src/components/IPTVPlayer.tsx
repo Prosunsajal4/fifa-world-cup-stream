@@ -11,7 +11,7 @@ interface Channel {
 }
 
 interface IPTVPlayerProps {
-  type: "bd" | "bangla" | "sports";
+  type: "bd" | "indian-bangla" | "sports";
   title: string;
   description: string;
   icon: React.ReactNode;
