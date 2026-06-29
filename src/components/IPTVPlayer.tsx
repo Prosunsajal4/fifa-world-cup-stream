@@ -60,6 +60,11 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
     }
   };
 
+  const getStreamUrl = (url: string) => {
+    if (url.includes("akamaized.net") || url.includes("amagi.tv")) return url;
+    return `/api/stream?url=${encodeURIComponent(url)}`;
+  };
+
   const playStream = useCallback((channel: Channel) => {
     destroyHls();
     setStreamError(false);
@@ -69,7 +74,7 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
     setTimeout(() => {
       if (!videoRef.current) return;
       const video = videoRef.current;
-      const url = channel.url;
+      const url = getStreamUrl(channel.url);
 
       if (url.includes(".m3u8")) {
         if (Hls.isSupported()) {

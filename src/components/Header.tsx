@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn, Radio, LogOut, User as UserIcon } from "lucide-react";
-import { getSession, logout, type User } from "@/lib/auth";
+import { Menu, X, Zap, Tv, Calendar, Trophy, Newspaper, LogIn, Radio, LogOut, User as UserIcon } from "lucide-react";
+import { getSession, logout } from "@/lib/auth";
+import type { User } from "@/lib/auth";
 
 const navLinks = [
   { href: "/", label: "Home", icon: Zap },
@@ -19,12 +20,19 @@ const navLinks = [
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setUser(getSession());
+
     const handler = () => setUser(getSession());
     window.addEventListener("auth-change", handler);
-    return () => window.removeEventListener("auth-change", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("auth-change", handler);
+      window.removeEventListener("storage", handler);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -71,7 +79,7 @@ export default function Header() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            {user ? (
+            {mounted && user ? (
               <>
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface text-sm">
                   <UserIcon className="w-4 h-4 text-primary" />
@@ -131,7 +139,7 @@ export default function Header() {
               );
             })}
             <div className="pt-2 border-t border-border mt-2 space-y-1">
-              {user ? (
+              {mounted && user ? (
                 <>
                   <div className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground">
                     <UserIcon className="w-4 h-4 text-primary" />

@@ -41,6 +41,11 @@ function isHlsUrl(url: string): boolean {
   return url.includes(".m3u8");
 }
 
+function getProxiedUrl(url: string): string {
+  if (url.includes("akamaized.net")) return url;
+  return `/api/stream?url=${encodeURIComponent(url)}`;
+}
+
 export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = [] }: StreamPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
@@ -88,7 +93,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
     if (Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
       hlsRef.current = hls;
-      hls.loadSource(currentSource.embedUrl);
+      hls.loadSource(getProxiedUrl(currentSource.embedUrl));
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.play().catch(() => {});
@@ -142,7 +147,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
         <iframe
           ref={iframeRef}
           key={`${currentSourceIndex}`}
-          src={currentSource.embedUrl + (currentSource.embedUrl.includes("?") ? "&autoplay=1" : "?autoplay=1")}
+          src={getProxiedUrl(currentSource.embedUrl) + (currentSource.embedUrl.includes("?") ? "&autoplay=1" : "?autoplay=1")}
           className="absolute inset-0 w-full h-full border-0"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
