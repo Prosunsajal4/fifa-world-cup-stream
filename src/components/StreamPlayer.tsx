@@ -30,9 +30,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const englishSources = sources.filter((s) => !s.language.includes("Arabic") && !s.language.includes("beIN") && !s.language.includes("Portuguese")).reverse();
-  const otherSources = sources.filter((s) => s.language.includes("Arabic") || s.language.includes("beIN") || s.language.includes("Portuguese")).reverse();
-  const sortedSources = [...englishSources, ...otherSources];
+  const sortedSources = sources.filter((s) => s.language.includes("beIN"));
 
   const currentSource = sortedSources[currentSourceIndex] || null;
 
@@ -46,15 +44,8 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
       setCurrentSourceIndex(nextIndex);
       setAttemptCount((c) => c + 1);
       setLoading(true);
-
-      loadTimerRef.current = setTimeout(() => {
-        tryNextSource();
-      }, 3000);
     } else {
       setLoading(false);
-      if (loadTimerRef.current) {
-        clearTimeout(loadTimerRef.current);
-      }
     }
   }, [currentSourceIndex, sortedSources.length]);
 
