@@ -30,7 +30,24 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sortedSources = sources.filter((s) => s.source === "golf");
+  const fallbackSources: StreamSource[] = [
+    { id: "f1", streamNo: 0, language: "BeIN Sports 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f2", streamNo: 0, language: "BeIN Sports 4", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/26/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f3", streamNo: 0, language: "Fox Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/33/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f4", streamNo: 0, language: "Fox Sports 2", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/34/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f5", streamNo: 0, language: "TVP Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/89/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f6", streamNo: 0, language: "DAZN 1", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/94/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f7", streamNo: 0, language: "WIN Sports", hd: false, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/32/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f8", streamNo: 0, language: "D Sports", hd: true, embedUrl: "https://1nyaler.streamhostingcdn.top/stream/106/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f9", streamNo: 0, language: "Telemundo", hd: true, embedUrl: "https://nbculocallive.akamaized.net/hls/live/2037499/puertorico/stream1/master.m3u8", source: "iptv", viewers: 0 },
+    { id: "f10", streamNo: 0, language: "TVRI Sport", hd: false, embedUrl: "http://103.148.44.38:8000/play/a05u/index.m3u8", source: "iptv", viewers: 0 },
+    { id: "f11", streamNo: 0, language: "DD Sports", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/13/master.m3u8", source: "iptv", viewers: 0 },
+    { id: "f12", streamNo: 0, language: "DD Sports 2", hd: true, embedUrl: "https://cdn-6.pishow.tv/live/14/master.m3u8", source: "iptv", viewers: 0 },
+    { id: "f13", streamNo: 0, language: "T Sports", hd: true, embedUrl: "https://owrcovcrpy.gpcdn.net/bpk-tv/1728/output/index.m3u8", source: "iptv", viewers: 0 },
+  ];
+
+  const apiSources = sources.filter((s) => s.source === "golf" || s.source === "iptv");
+  const sortedSources = apiSources.length > 0 ? apiSources : fallbackSources;
 
   const currentSource = sortedSources[currentSourceIndex] || null;
 
