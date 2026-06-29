@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,43 +11,50 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) {
-      return new Response("Stream not available", { status: res.status });
+      return new Response(`Upstream error: ${res.status}`, { status: res.status });
     }
 
-    const contentType = res.headers.get("content-type") || "";
-    const body = await res.text();
+    const buffer = await res.arrayBuffer();
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
 
-    if (contentType.includes("mpegurl") || url.includes(".m3u8") || body.trim().startsWith("#EXTM3U")) {
+    if (text.trim().startsWith("#EXTM3U")) {
       const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
-      const rewritten = body.replace(/(^(?!#).+\.m3u8.*$|^(?!#).+\.ts.*$)/gm, (match) => {
-        let segmentUrl = match.trim();
-        if (!segmentUrl.startsWith("http")) {
-          segmentUrl = baseUrl + segmentUrl;
+      const lines = text.split("\n");
+      const rewritten = lines.map((line) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("#") || trimmed === "") return line;
+        let fullUrl = trimmed;
+        if (!trimmed.startsWith("http")) {
+          fullUrl = baseUrl + trimmed;
         }
-        return `/api/stream?url=${encodeURIComponent(segmentUrl)}`;
-      });
-      return new NextResponse(rewritten, {
+        return `/api/stream?url=${encodeURIComponent(fullUrl)}`;
+      }).join("\n");
+
+      return new Response(rewritten, {
         headers: {
           "Content-Type": "application/vnd.apple.mpegurl",
           "Access-Control-Allow-Origin": "*",
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
         },
       });
     }
 
-    return new NextResponse(body, {
+    return new Response(buffer, {
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": res.headers.get("content-type") || "application/octet-stream",
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-store",
       },
     });
-  } catch {
-    return new Response("Failed to fetch stream", { status: 500 });
+  } catch (e) {
+    return new Response(`Proxy error: ${e instanceof Error ? e.message : "unknown"}`, { status: 502 });
   }
 }

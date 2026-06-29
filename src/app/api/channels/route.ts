@@ -9,6 +9,8 @@ interface Channel {
 
 export const dynamic = "force-dynamic";
 
+const WORKING_HOSTS = ["owrcovcrpy.gpcdn.net", "bozztv.com"];
+
 export async function GET() {
   try {
     const res = await fetch("https://lupael.github.io/IPTV/running.m3u", { next: { revalidate: 300 } });
@@ -22,10 +24,13 @@ export async function GET() {
         const url = lines[i + 1];
         if (!url || url.startsWith("#")) continue;
 
+        const trimmedUrl = url.trim();
+        const isWorkingHost = WORKING_HOSTS.some((h) => trimmedUrl.includes(h));
+        if (!isWorkingHost) continue;
+
         const nameMatch = info.match(/,(.+)$/);
         const logoMatch = info.match(/tvg-logo="([^"]+)"/);
         const groupMatch = info.match(/group-title="([^"]+)"/);
-
         const name = nameMatch?.[1]?.trim() || "Unknown";
 
         if (name.includes("(Source 2)") || name.includes("(Source 3)")) continue;
@@ -34,7 +39,7 @@ export async function GET() {
           name,
           logo: logoMatch?.[1] || "",
           group: groupMatch?.[1] || "General",
-          url: url.trim(),
+          url: trimmedUrl,
         });
       }
     }
