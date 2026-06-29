@@ -30,7 +30,7 @@ export default function StreamPlayer({ matchId, homeTeam, awayTeam, sources = []
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sortedSources = sources.filter((s) => s.language.includes("beIN"));
+  const sortedSources = sources.filter((s) => s.language.includes("TSN") || s.language.includes("BBC") || s.language.includes("ITV"));
 
   const currentSource = sortedSources[currentSourceIndex] || null;
 
