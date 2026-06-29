@@ -26,8 +26,12 @@ export async function GET() {
         const logoMatch = info.match(/tvg-logo="([^"]+)"/);
         const groupMatch = info.match(/group-title="([^"]+)"/);
 
+        const name = nameMatch?.[1]?.trim() || "Unknown";
+
+        if (name.includes("(Source 2)") || name.includes("(Source 3)")) continue;
+
         channels.push({
-          name: nameMatch?.[1]?.trim() || "Unknown",
+          name,
           logo: logoMatch?.[1] || "",
           group: groupMatch?.[1] || "General",
           url: url.trim(),

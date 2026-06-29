@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, X, Tv, Radio, Search, ChevronDown, Maximize, Minimize } from "lucide-react";
+import Hls from "hls.js";
 
 interface Channel {
   name: string;
@@ -17,8 +18,10 @@ export default function BanglaTVPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [streamError, setStreamError] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
     fetch("/api/channels")
@@ -47,12 +50,72 @@ export default function BanglaTVPage() {
     }
   };
 
-  useEffect(() => {
-    if (selectedChannel && videoRef.current) {
-      videoRef.current.src = selectedChannel.url;
-      videoRef.current.play().catch(() => {});
+  const playStream = useCallback((channel: Channel) => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
-  }, [selectedChannel]);
+
+    setStreamError(false);
+    setSelectedChannel(channel);
+
+    setTimeout(() => {
+      if (!videoRef.current) return;
+      const video = videoRef.current;
+      const streamUrl = `/api/stream?url=${encodeURIComponent(channel.url)}`;
+
+      if (channel.url.includes(".m3u8")) {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            startFragPrefetch: true,
+          });
+          hlsRef.current = hls;
+          hls.loadSource(streamUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            video.play().catch(() => {});
+          });
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal) {
+              setStreamError(true);
+            }
+          });
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = streamUrl;
+          video.play().catch(() => {});
+        }
+      } else {
+        video.src = streamUrl;
+        video.play().catch(() => {});
+      }
+    }, 100);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, []);
+
+  const closePlayer = () => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+    }
+    setSelectedChannel(null);
+    setStreamError(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,18 +132,9 @@ export default function BanglaTVPage() {
 
         {selectedChannel && (
           <div ref={playerRef} className="mb-6 relative rounded-xl overflow-hidden glow-border bg-black aspect-video max-w-4xl mx-auto">
-            <video
-              ref={videoRef}
-              className="w-full h-full"
-              controls
-              autoPlay
-              playsInline
-            />
+            <video ref={videoRef} className="w-full h-full" controls autoPlay playsInline />
             <button
-              onClick={() => {
-                setSelectedChannel(null);
-                if (videoRef.current) videoRef.current.pause();
-              }}
+              onClick={closePlayer}
               className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-black/70 flex items-center justify-center hover:bg-black/90 transition-colors z-20"
             >
               <X className="w-4 h-4 text-white" />
@@ -91,6 +145,17 @@ export default function BanglaTVPage() {
             >
               {isFullscreen ? <Minimize className="w-4 h-4 text-white" /> : <Maximize className="w-4 h-4 text-white" />}
             </button>
+            {streamError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10">
+                <p className="text-white text-sm mb-3">Stream unavailable</p>
+                <button
+                  onClick={() => playStream(selectedChannel)}
+                  className="px-4 py-2 bg-primary rounded-lg text-white text-sm hover:bg-primary/80"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pt-8">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 bg-green-500/80 rounded-lg px-3 py-1.5">
@@ -122,7 +187,9 @@ export default function BanglaTVPage() {
               className="appearance-none pl-4 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
             >
               {groups.map((g) => (
-                <option key={g} value={g} className="bg-surface">{g}</option>
+                <option key={g} value={g} className="bg-surface">
+                  {g}
+                </option>
               ))}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
@@ -146,7 +213,7 @@ export default function BanglaTVPage() {
               {filteredChannels.map((channel, index) => (
                 <button
                   key={index}
-                  onClick={() => setSelectedChannel(channel)}
+                  onClick={() => playStream(channel)}
                   className={`text-left rounded-xl overflow-hidden transition-all hover:scale-[1.02] ${
                     selectedChannel?.url === channel.url
                       ? "ring-2 ring-primary glow-border"
@@ -164,7 +231,9 @@ export default function BanglaTVPage() {
                         }}
                       />
                     ) : null}
-                    <div className={`absolute inset-0 flex items-center justify-center ${channel.logo ? "opacity-0 hover:opacity-100" : ""} bg-black/40 transition-opacity`}>
+                    <div
+                      className={`absolute inset-0 flex items-center justify-center ${channel.logo ? "opacity-0 hover:opacity-100" : ""} bg-black/40 transition-opacity`}
+                    >
                       <div className="w-10 h-10 rounded-full bg-primary/80 flex items-center justify-center">
                         <Play className="w-5 h-5 text-white ml-0.5" />
                       </div>
