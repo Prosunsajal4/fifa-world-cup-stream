@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn } from "lucide-react";
+import { Menu, X, Zap, Tv, Calendar, Users, Trophy, Newspaper, LogIn, Radio } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Home", icon: Zap },
   { href: "/live", label: "Live", icon: Tv },
+  { href: "/bangla-tv", label: "Bangla TV", icon: Radio },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/teams", label: "Teams", icon: Users },
   { href: "/standings", label: "Standings", icon: Trophy },
