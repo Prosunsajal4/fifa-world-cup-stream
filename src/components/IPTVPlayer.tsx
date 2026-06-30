@@ -70,45 +70,43 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
       const video = videoRef.current;
       if (!video) return;
       const url = channel.url;
+      const proxyUrl = `/api/stream?url=${encodeURIComponent(url)}`;
 
-      const onFatalError = () => {
-        setStreamError(true);
-        setPlaying(false);
-      };
-
-      if (url.includes(".m3u8") && Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-          startFragPrefetch: true,
-        });
-        hlsRef.current = hls;
-
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setPlaying(true);
-          video.play().catch(() => {});
-        });
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls.startLoad();
-            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              hls.recoverMediaError();
-            } else {
-              onFatalError();
+      if (url.includes(".m3u8")) {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            startFragPrefetch: true,
+          });
+          hlsRef.current = hls;
+          hls.loadSource(proxyUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            setPlaying(true);
+            video.play().catch(() => {});
+          });
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal) {
+              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                hls.startLoad();
+              } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                hls.recoverMediaError();
+              } else {
+                setStreamError(true);
+                setPlaying(false);
+              }
             }
-          }
-        });
-      } else if (url.includes(".m3u8") && video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = url;
-        video.play().then(() => setPlaying(true)).catch(onFatalError);
+          });
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = proxyUrl;
+          video.play().then(() => setPlaying(true)).catch(() => setStreamError(true));
+        }
       } else {
         video.src = url;
-        video.play().then(() => setPlaying(true)).catch(onFatalError);
+        video.play().then(() => setPlaying(true)).catch(() => setStreamError(true));
       }
     }, 100);
   }, [destroyHls]);

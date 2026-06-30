@@ -9,56 +9,48 @@ interface Channel {
   group: string;
 }
 
-const M3U_URL = "https://go.skym3u.top/nszn.m3u";
+const BD_CHANNELS: Channel[] = [
+  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/maasrangatv/logo.png", group: "bd" },
+  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/gazitv/logo.png", group: "bd" },
+  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/tsports/logo.png", group: "bd" },
+  { name: "BTV", url: "https://cdn.hoichoi24.com/lb/btv/btv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "BTV World", url: "https://cdn.hoichoi24.com/lb/btv/btv_720p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Ekattor TV", url: "https://cdn.hoichoi24.com/lb/ekattortv/ekattortv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Jamuna TV", url: "https://cdn.hoichoi24.com/lb/jamunatv/jamunatv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Somoy TV", url: "https://cdn.hoichoi24.com/lb/somoytv/somoytv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "NTV", url: "https://cdn.hoichoi24.com/lb/ntv/ntv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Channel i", url: "https://cdn.hoichoi24.com/lb/channeli/channeli_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Channel 24", url: "https://cdn.hoichoi24.com/lb/channel24/channel24_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "DBC News", url: "https://cdn.hoichoi24.com/lb/dbcnews/dbcnews_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Nagorik TV", url: "https://cdn.hoichoi24.com/lb/nagoriktv/nagoriktv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Independent TV", url: "https://cdn.hoichoi24.com/lb/independent/independent_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Deepto TV", url: "https://cdn.hoichoi24.com/lb/deeptotv/deeptotv_360p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "RTV", url: "https://cdn.hoichoi24.com/lb/rtv/rtv_360p/playlist.m3u8", logo: "", group: "bd" },
+];
 
-async function fetchChannels(): Promise<Channel[]> {
-  const channels: Channel[] = [];
-  try {
-    const res = await fetch(M3U_URL, { next: { revalidate: 300 } });
-    const text = await res.text();
-    const lines = text.split("\n").map((l) => l.trim());
+const INDIAN_BANGLA_CHANNELS: Channel[] = [
+  { name: "Star Jalsha HD", url: "https://tvsen4.aynaott.com/n64PH4YL/index.m3u8", logo: "", group: "indian-bangla" },
+  { name: "Zee Bangla Sonar", url: "https://d1g8wgjurz8via.cloudfront.net/bpk-tv/ColorsHD/default/ColorsHD.m3u8", logo: "", group: "indian-bangla" },
+  { name: "Enterr 10 Bangla", url: "https://live-bangla.akamaized.net/liveabr/playlist.m3u8", logo: "", group: "indian-bangla" },
+];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.startsWith("#EXTINF")) continue;
-      const url = lines[i + 1]?.trim();
-      if (!url || !url.startsWith("http")) continue;
-
-      const nameMatch = line.match(/,(.+)$/);
-      const name = nameMatch?.[1]?.trim() || "";
-      const logoMatch = line.match(/tvg-logo="([^"]+)"/);
-      const logo = logoMatch?.[1] || "";
-      if (!name) continue;
-
-      channels.push({ name, url, logo, group: "bd" });
-    }
-  } catch {}
-  return channels;
-}
+const SPORTS_CHANNELS: Channel[] = [
+  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/tsports/logo.png", group: "sports" },
+  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/maasrangatv/logo.png", group: "sports" },
+  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/gazitv/logo.png", group: "sports" },
+  { name: "DD Sports", url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8", logo: "", group: "sports" },
+];
 
 export async function GET(request: Request) {
   const type = new URL(request.url).searchParams.get("type") || "bd";
 
-  if (type === "bd") {
-    const channels = await fetchChannels();
-    return NextResponse.json({ channels });
-  }
-
   if (type === "indian-bangla") {
-    const channels = await fetchChannels();
-    const indian = channels.filter((ch) =>
-      /zee|star jalsha|jalsha|enter 10|sony aath|colors bangla|color bangla|sun bangla/i.test(ch.name)
-    );
-    return NextResponse.json({ channels: indian });
+    return NextResponse.json({ channels: INDIAN_BANGLA_CHANNELS });
   }
 
   if (type === "sports") {
-    const channels = await fetchChannels();
-    const sports = channels.filter((ch) =>
-      /sports|bein|ten |sony ten|star sports|t sports|espn|cricket|football/i.test(ch.name)
-    );
-    return NextResponse.json({ channels: sports });
+    return NextResponse.json({ channels: SPORTS_CHANNELS });
   }
 
-  return NextResponse.json({ channels: [] });
+  return NextResponse.json({ channels: BD_CHANNELS });
 }
