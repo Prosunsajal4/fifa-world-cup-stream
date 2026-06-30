@@ -18,34 +18,60 @@ export async function GET(request: NextRequest) {
       return new Response(`Upstream error: ${res.status}`, { status: res.status });
     }
 
-    const contentType = res.headers.get("content-type") || "application/vnd.apple.mpegurl";
-    let body: string;
+    const contentType = res.headers.get("content-type") || "";
+    const isM3u8 = contentType.includes("mpegurl") || contentType.includes("m3u8") || url.includes(".m3u8");
 
-    if (contentType.includes("mpegurl") || url.includes(".m3u8")) {
-      body = await res.text();
+    if (isM3u8) {
+      let body = await res.text();
       const baseUrl = url.replace(/\/[^/]*$/, "/");
-      body = body.replace(/(^(?!#).+\.m3u8.*$|^(?!#).+\.ts.*$)/gm, (match) => {
-        if (match.startsWith("http")) {
-          return `/api/stream?url=${encodeURIComponent(match)}`;
+
+      const rewriteUrl = (u: string): string => {
+        let full: string;
+        if (u.startsWith("http")) {
+          full = u;
+        } else {
+          try { full = new URL(u, baseUrl).href; } catch { full = u; }
         }
-        return `/api/stream?url=${encodeURIComponent(new URL(match, baseUrl).href)}`;
-      });
-    } else {
-      const buf = await res.arrayBuffer();
-      return new Response(buf, {
+        return `/api/stream?url=${encodeURIComponent(full)}`;
+      };
+
+      const lines = body.split("\n");
+      const rewritten: string[] = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.startsWith("#EXT-X-MEDIA:")) {
+          const rewritten_line = line.replace(/URI="([^"]+)"/gi, (_match, uri) => {
+            return `URI="${rewriteUrl(uri)}"`;
+          });
+          rewritten.push(rewritten_line);
+        } else if (line.startsWith("#EXT-X-STREAM-INF:")) {
+          rewritten.push(line);
+        } else if (!line.startsWith("#") && line.trim()) {
+          rewritten.push(rewriteUrl(line.trim()));
+        } else {
+          rewritten.push(line);
+        }
+      }
+
+      body = rewritten.join("\n");
+
+      return new Response(body, {
         status: 200,
         headers: {
-          "Content-Type": contentType,
+          "Content-Type": "application/vnd.apple.mpegurl",
           "Access-Control-Allow-Origin": "*",
           "Cache-Control": "public, max-age=2",
         },
       });
     }
 
-    return new Response(body, {
+    const buf = await res.arrayBuffer();
+    return new Response(buf, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": contentType || "application/octet-stream",
         "Access-Control-Allow-Origin": "*",
         "Cache-Control": "public, max-age=2",
       },

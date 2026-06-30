@@ -10,9 +10,9 @@ interface Channel {
 }
 
 const BD_CHANNELS: Channel[] = [
-  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/maasrangatv/logo.png", group: "bd" },
-  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/gazitv/logo.png", group: "bd" },
-  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/tsports/logo.png", group: "bd" },
+  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "", group: "bd" },
+  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "", group: "bd" },
   { name: "BTV", url: "https://cdn.hoichoi24.com/lb/btv/btv_360p/playlist.m3u8", logo: "", group: "bd" },
   { name: "BTV World", url: "https://cdn.hoichoi24.com/lb/btv/btv_720p/playlist.m3u8", logo: "", group: "bd" },
   { name: "Ekattor TV", url: "https://cdn.hoichoi24.com/lb/ekattortv/ekattortv_360p/playlist.m3u8", logo: "", group: "bd" },
@@ -35,9 +35,9 @@ const INDIAN_BANGLA_CHANNELS: Channel[] = [
 ];
 
 const SPORTS_CHANNELS: Channel[] = [
-  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/tsports/logo.png", group: "sports" },
-  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/maasrangatv/logo.png", group: "sports" },
-  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "https://cdn.hoichoi24.com/lb/gazitv/logo.png", group: "sports" },
+  { name: "T Sports HD", url: "https://cdn.hoichoi24.com/lb/tsports/tsports_720p/playlist.m3u8", logo: "", group: "sports" },
+  { name: "Maasranga TV", url: "https://cdn.hoichoi24.com/lb/maasrangatv/maasranga_720p/playlist.m3u8", logo: "", group: "sports" },
+  { name: "Gazi TV", url: "https://cdn.hoichoi24.com/lb/gazitv/gazitv_720p/playlist.m3u8", logo: "", group: "sports" },
   { name: "DD Sports", url: "https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8", logo: "", group: "sports" },
 ];
 
