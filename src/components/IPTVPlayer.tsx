@@ -70,7 +70,6 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
       if (!videoRef.current) return;
       const video = videoRef.current;
       const url = channel.url;
-      const streamUrl = `/api/stream?url=${encodeURIComponent(url)}`;
 
       if (url.includes(".m3u8")) {
         if (Hls.isSupported()) {
@@ -82,7 +81,7 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
             startFragPrefetch: true,
           });
           hlsRef.current = hls;
-          hls.loadSource(streamUrl);
+          hls.loadSource(url);
           hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             setPlaying(true);
@@ -101,7 +100,10 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
             }
           });
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = streamUrl;
+          video.src = url;
+          video.play().then(() => setPlaying(true)).catch(() => {});
+        } else {
+          video.src = url;
           video.play().then(() => setPlaying(true)).catch(() => {});
         }
       } else {
