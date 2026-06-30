@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, X, Search, ChevronDown, Maximize, Minimize, RefreshCw, Tv, Radio } from "lucide-react";
+import { Play, X, Search, Maximize, Minimize, RefreshCw, Radio } from "lucide-react";
+import Hls from "hls.js";
 
 interface Channel {
   name: string;
@@ -27,6 +28,7 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
   const [playing, setPlaying] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
     fetch(`/api/iptv?type=${type}`)
@@ -51,33 +53,73 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
     }
   };
 
+  const destroyHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
+
   const playStream = useCallback((channel: Channel) => {
+    destroyHls();
     setStreamError(false);
     setPlaying(false);
     setSelectedChannel(channel);
 
     setTimeout(() => {
-      if (!videoRef.current) return;
       const video = videoRef.current;
+      if (!video) return;
       const url = channel.url;
 
-      if (url.includes(".m3u8")) {
-        video.src = url;
-        video.play().then(() => setPlaying(true)).catch(() => {
-          setStreamError(true);
+      const onFatalError = () => {
+        setStreamError(true);
+        setPlaying(false);
+      };
+
+      if (url.includes(".m3u8") && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          startFragPrefetch: true,
         });
+        hlsRef.current = hls;
+
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setPlaying(true);
+          video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.startLoad();
+            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              hls.recoverMediaError();
+            } else {
+              onFatalError();
+            }
+          }
+        });
+      } else if (url.includes(".m3u8") && video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url;
+        video.play().then(() => setPlaying(true)).catch(onFatalError);
       } else {
         video.src = url;
-        video.play().then(() => setPlaying(true)).catch(() => {});
+        video.play().then(() => setPlaying(true)).catch(onFatalError);
       }
     }, 100);
-  }, []);
+  }, [destroyHls]);
 
   const closePlayer = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.removeAttribute("src");
-      videoRef.current.load();
+    destroyHls();
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
     }
     setSelectedChannel(null);
     setStreamError(false);
