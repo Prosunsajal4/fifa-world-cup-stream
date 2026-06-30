@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, X, Search, ChevronDown, Maximize, Minimize, RefreshCw, Tv, Radio } from "lucide-react";
-import Hls from "hls.js";
 
 interface Channel {
   name: string;
@@ -28,7 +27,6 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
   const [playing, setPlaying] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
     fetch(`/api/iptv?type=${type}`)
@@ -53,15 +51,7 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
     }
   };
 
-  const destroyHls = () => {
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-  };
-
   const playStream = useCallback((channel: Channel) => {
-    destroyHls();
     setStreamError(false);
     setPlaying(false);
     setSelectedChannel(channel);
@@ -72,40 +62,10 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
       const url = channel.url;
 
       if (url.includes(".m3u8")) {
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: true,
-            maxBufferLength: 30,
-            maxMaxBufferLength: 60,
-            startFragPrefetch: true,
-          });
-          hlsRef.current = hls;
-          hls.loadSource(url);
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setPlaying(true);
-            video.play().catch(() => {});
-          });
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                hls.startLoad();
-              } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                hls.recoverMediaError();
-              } else {
-                setStreamError(true);
-                setPlaying(false);
-              }
-            }
-          });
-        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = url;
-          video.play().then(() => setPlaying(true)).catch(() => {});
-        } else {
-          video.src = url;
-          video.play().then(() => setPlaying(true)).catch(() => {});
-        }
+        video.src = url;
+        video.play().then(() => setPlaying(true)).catch(() => {
+          setStreamError(true);
+        });
       } else {
         video.src = url;
         video.play().then(() => setPlaying(true)).catch(() => {});
@@ -113,12 +73,7 @@ export default function IPTVPlayer({ type, title, description, icon, accentColor
     }, 100);
   }, []);
 
-  useEffect(() => {
-    return () => destroyHls();
-  }, []);
-
   const closePlayer = () => {
-    destroyHls();
     if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.removeAttribute("src");
